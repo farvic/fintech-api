@@ -6,7 +6,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -15,11 +15,15 @@ spring:
     redis:
       host: localhost
       port: 6379
+  flyway:
+    enabled: true
 
-app:
+security:
   jwt:
-    secret: change-this-secret-key-change-this-secret-key
-    expiration-ms: 3600000
+    issuer: fintech-api
+    expiration-seconds: 3600
+    # Set an environment variable named SECURITY_JWT_SECRET with a strong secret value
+    secret: ${SECURITY_JWT_SECRET}
 
 springdoc:
   swagger-ui:
@@ -27,3 +31,4 @@ springdoc:
 
 server:
   port: 8080
+
