@@ -32,7 +32,7 @@ public class AccountService {
         Account account = Account.builder()
                 .user(user)
                 .accountNumber(generateAccountNumber())
-                .balance(BigDecimal.ZERO)
+                .balance(BigDecimal.ZERO.setScale(2))
                 .status(AccountStatus.ACTIVE)
                 .createdAt(Instant.now())
                 .build();
