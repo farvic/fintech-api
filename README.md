@@ -2,6 +2,11 @@ Repositório do fintech-api.
 
 A ser atualizado
 
+- Integração com banco de dados PostgreSQL
+- Criação de conta e login com filtro de autenticação JWT
+- Transferência entre contas
+- Listagem de contas
+
 ## Configurando o JWT_SECRET
 
 Por ser informação sensível, o JWT secret configurado no [src/main/resources/application.yml](src/main/resources/application.yml) não deve ficar exposto. 
