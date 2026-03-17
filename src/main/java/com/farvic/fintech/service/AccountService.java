@@ -10,9 +10,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import com.farvic.fintech.dto.account.AccountResponse;
+import com.farvic.fintech.dto.account.DepositRequest;
 import com.farvic.fintech.entity.Account;
 import com.farvic.fintech.entity.User;
 import com.farvic.fintech.enums.AccountStatus;
+import com.farvic.fintech.exception.BusinessException;
 import com.farvic.fintech.exception.ResourceNotFoundException;
 import com.farvic.fintech.repository.AccountRepository;
 import com.farvic.fintech.repository.UserRepository;
@@ -81,4 +83,22 @@ public class AccountService {
                 account.getCreatedAt()
         );
     }
+
+    public AccountResponse deposit(UUID accountId, DepositRequest request, Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+
+        Account account = accountRepository.findByIdAndUser(accountId, user)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new BusinessException("Account must be active to receive deposits");
+        }
+
+        account.setBalance(account.getBalance().add(request.amount()));
+        account = accountRepository.save(account);
+
+        return toResponse(account);
+    }
+
+    
 }
