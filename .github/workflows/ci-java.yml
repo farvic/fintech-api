@@ -6,9 +6,32 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fintech
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fintech"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-      SECURITY_JWT_SECRET: ${{ secrets.SECURITY_JWT_SECRET}}
+      SECURITY_JWT_SECRET: ${{ secrets.SECURITY_JWT_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
