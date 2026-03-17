@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.farvic.fintech.dto.account.AccountResponse;
 import com.farvic.fintech.dto.account.DepositRequest;
+import com.farvic.fintech.dto.account.WithdrawRequest;
 import com.farvic.fintech.entity.Account;
 import com.farvic.fintech.entity.Transaction;
 import com.farvic.fintech.entity.User;
@@ -115,6 +116,41 @@ public class AccountService {
             .description("Deposit")
             .createdAt(Instant.now())
             .build();
+
+        transactionRepository.save(transaction);
+
+        return toResponse(account);
+    }
+
+    @Transactional
+    public AccountResponse withdraw(UUID accountId, WithdrawRequest request, Authentication authentication) {
+        User user = getAuthenticatedUser(authentication);
+
+        Account account = accountRepository.findByIdAndUser(accountId, user)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new BusinessException("Account must be active to allow withdrawals");
+        }
+
+        BigDecimal amount = request.amount().setScale(2);
+
+        if (account.getBalance().compareTo(amount) < 0) {
+            throw new BusinessException("Insufficient balance");
+        }
+
+        account.setBalance(account.getBalance().subtract(amount));
+        account = accountRepository.save(account);
+
+        Transaction transaction = Transaction.builder()
+                .fromAccount(account)
+                .toAccount(null)
+                .amount(amount)
+                .type(TransactionType.WITHDRAW)
+                .status(TransactionStatus.COMPLETED)
+                .description("Withdraw")
+                .createdAt(Instant.now())
+                .build();
 
         transactionRepository.save(transaction);
 
