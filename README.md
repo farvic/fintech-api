@@ -9,7 +9,7 @@ A ser atualizado
 
 ## Configurando o JWT_SECRET
 
-Por ser informação sensível, o JWT secret configurado no [src/main/resources/application.yml](src/main/resources/application.yml) não deve ficar exposto. 
+Por ser informação sensível, o JWT secret configurado no [application.yml](src/main/resources/application.yml) não deve ficar exposto. 
 
 ```yml
 security:
@@ -33,4 +33,4 @@ $env:SECURITY_JWT_SECRET="SUA_CHAVE_EM_BASE64"
 export SECURITY_JWT_SECRET="SUA_CHAVE_EM_BASE64"
 ```
 
-É possível gerar uma chave em base64 no site a seguir: [Random Base64 Generator][https://www.convertsimple.com/random-base64-generator/]
+É possível gerar uma chave em base64 no site a seguir: [Random Base64 Generator](https://www.convertsimple.com/random-base64-generator/)

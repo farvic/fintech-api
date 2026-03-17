@@ -10,5 +10,5 @@ import com.farvic.fintech.entity.Account;
 import com.farvic.fintech.entity.Transaction;
 
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
-    Page<Transaction> findByFromAccountOrToAccount(Account fromAccount, Account toAccount, Pageable pageable);
+    Page<Transaction> findByFromAccountOrToAccountOrderByCreatedAtDesc(Account fromAccount, Account toAccount, Pageable pageable);
 }

@@ -1,5 +1,15 @@
 package com.farvic.fintech.service;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.farvic.fintech.dto.transaction.TransactionResponse;
 import com.farvic.fintech.dto.transaction.TransferRequest;
 import com.farvic.fintech.entity.Account;
@@ -14,16 +24,8 @@ import com.farvic.fintech.exception.UnauthorizedOperationException;
 import com.farvic.fintech.repository.AccountRepository;
 import com.farvic.fintech.repository.TransactionRepository;
 import com.farvic.fintech.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -74,7 +76,7 @@ public class TransactionService {
 
         validateTransferOwnership(user, account);
 
-        return transactionRepository.findByFromAccountOrToAccount(account, account, pageable)
+        return transactionRepository.findByFromAccountOrToAccountOrderByCreatedAtDesc(account, account, pageable)
                 .map(this::toResponse);
     }
 
@@ -111,8 +113,8 @@ public class TransactionService {
     private TransactionResponse toResponse(Transaction transaction) {
         return new TransactionResponse(
                 transaction.getId(),
-                transaction.getFromAccount().getId(),
-                transaction.getToAccount().getId(),
+                transaction.getFromAccount() != null ? transaction.getFromAccount().getId() : null,
+                transaction.getToAccount() != null ? transaction.getToAccount().getId() : null,
                 transaction.getAmount(),
                 transaction.getType(),
                 transaction.getStatus(),

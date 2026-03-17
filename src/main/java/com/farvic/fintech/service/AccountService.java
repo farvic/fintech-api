@@ -12,13 +12,18 @@ import org.springframework.stereotype.Service;
 import com.farvic.fintech.dto.account.AccountResponse;
 import com.farvic.fintech.dto.account.DepositRequest;
 import com.farvic.fintech.entity.Account;
+import com.farvic.fintech.entity.Transaction;
 import com.farvic.fintech.entity.User;
 import com.farvic.fintech.enums.AccountStatus;
+import com.farvic.fintech.enums.TransactionStatus;
+import com.farvic.fintech.enums.TransactionType;
 import com.farvic.fintech.exception.BusinessException;
 import com.farvic.fintech.exception.ResourceNotFoundException;
 import com.farvic.fintech.repository.AccountRepository;
+import com.farvic.fintech.repository.TransactionRepository;
 import com.farvic.fintech.repository.UserRepository;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -26,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class AccountService {
 
     private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
 
     public AccountResponse createAccount(Authentication authentication) {
@@ -84,6 +90,7 @@ public class AccountService {
         );
     }
 
+    @Transactional
     public AccountResponse deposit(UUID accountId, DepositRequest request, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
@@ -94,8 +101,22 @@ public class AccountService {
             throw new BusinessException("Account must be active to receive deposits");
         }
 
-        account.setBalance(account.getBalance().add(request.amount()));
+        BigDecimal amount = request.amount().setScale(2);
+
+        account.setBalance(account.getBalance().add(amount));
         account = accountRepository.save(account);
+
+        Transaction transaction = Transaction.builder()
+            .fromAccount(null)
+            .toAccount(account)
+            .amount(amount)
+            .type(TransactionType.DEPOSIT)
+            .status(TransactionStatus.COMPLETED)
+            .description("Deposit")
+            .createdAt(Instant.now())
+            .build();
+
+        transactionRepository.save(transaction);
 
         return toResponse(account);
     }

@@ -1,0 +1,3 @@
+security:
+  jwt:
+    secret: ZmFrZS1zZWNyZXQtZm9yLXRlc3RzLTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=
