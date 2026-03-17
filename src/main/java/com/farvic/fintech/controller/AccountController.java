@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.farvic.fintech.dto.account.AccountResponse;
 import com.farvic.fintech.dto.account.DepositRequest;
+import com.farvic.fintech.dto.account.WithdrawRequest;
 import com.farvic.fintech.service.AccountService;
 
 import jakarta.validation.Valid;
@@ -49,5 +50,13 @@ public class AccountController {
                                 @Valid @RequestBody DepositRequest request,
                                 Authentication authentication) {
         return accountService.deposit(id, request, authentication);
+    }
+
+    @PostMapping("/{id}/withdraw")
+    @ResponseStatus(HttpStatus.OK)
+    public AccountResponse withdraw(@PathVariable UUID id,
+                                    @Valid @RequestBody WithdrawRequest request,
+                                    Authentication authentication) {
+        return accountService.withdraw(id, request, authentication);
     }
 }
