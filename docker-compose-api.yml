@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: fintech-postgres
+    environment:
+      POSTGRES_DB: fintech
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - fintech_pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: fintech-redis
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fintech-api-full
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fintech
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+
+volumes:
+  fintech_pgdata:

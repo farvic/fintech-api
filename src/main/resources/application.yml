@@ -24,11 +24,19 @@ security:
     expiration-seconds: 3600
     # Set an environment variable named SECURITY_JWT_SECRET with a strong secret value
     secret: ${SECURITY_JWT_SECRET}
-
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
 server:
   port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 
