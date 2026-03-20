@@ -1,10 +1,11 @@
 spring:
+  cache:
+    type: redis
   datasource:
     url: jdbc:postgresql://localhost:5432/fintech
     username: ${POSTGRES_USERNAME}
     password: ${POSTGRES_PASSWORD}
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: validate
     show-sql: true
@@ -15,6 +16,8 @@ spring:
     redis:
       host: localhost
       port: 6379
+      repositories:
+        enabled: false
   flyway:
     enabled: true
 
@@ -22,7 +25,6 @@ security:
   jwt:
     issuer: fintech-api
     expiration-seconds: 3600
-    # Set an environment variable named SECURITY_JWT_SECRET with a strong secret value
     secret: ${SECURITY_JWT_SECRET}
 springdoc:
   swagger-ui:
@@ -33,10 +35,25 @@ server:
 
 management:
   endpoints:
+    access:
+      max-permitted: read-only
     web:
+      discovery:
+        enabled: true
       exposure:
-        include: health
+        include:
+          - health
+          - metrics
+          - caches
   endpoint:
+    caches:
+      access: read-only
+    metrics:
+      access: read-only
     health:
       show-details: never
+      access: read-only
+  metrics:
+    enable:
+      cache: true
 

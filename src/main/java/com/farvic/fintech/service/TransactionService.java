@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -36,6 +39,11 @@ public class TransactionService {
     private final UserRepository userRepository;
 
     @Transactional
+        @Caching(evict = {
+            @CacheEvict(cacheNames = "transactionsByAccount", allEntries = true),
+            @CacheEvict(cacheNames = "accountsByUser", allEntries = true),
+            @CacheEvict(cacheNames = "accountById", allEntries = true)
+        })
     public TransactionResponse transfer(TransferRequest request, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
@@ -68,6 +76,7 @@ public class TransactionService {
         return toResponse(transaction);
     }
 
+    @Cacheable(cacheNames = "transactionsByAccount", key = "#authentication.name + ':' + #accountId + ':' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()")
     public Page<TransactionResponse> listMyTransactions(UUID accountId, Pageable pageable, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 

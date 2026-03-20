@@ -2,10 +2,14 @@ package com.farvic.fintech.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +39,10 @@ public class AccountService {
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
 
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "accountsByUser", key = "#authentication.name"),
+            @CacheEvict(cacheNames = "accountById", allEntries = true)
+    })
     public AccountResponse createAccount(Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
@@ -50,14 +58,16 @@ public class AccountService {
         return toResponse(account);
     }
 
+    @Cacheable(cacheNames = "accountsByUser", key = "#authentication.name")
     public List<AccountResponse> listMyAccounts(Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
         return accountRepository.findByUser(user)
                 .stream()
                 .map(this::toResponse)
-                .toList();
+            .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
     }
 
+    @Cacheable(cacheNames = "accountById", key = "#authentication.name + ':' + #accountId")
     public AccountResponse getMyAccountById(UUID accountId, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
@@ -92,6 +102,11 @@ public class AccountService {
     }
 
     @Transactional
+        @Caching(evict = {
+            @CacheEvict(cacheNames = "accountsByUser", key = "#authentication.name"),
+            @CacheEvict(cacheNames = "accountById", key = "#authentication.name + ':' + #accountId"),
+            @CacheEvict(cacheNames = "transactionsByAccount", allEntries = true)
+        })
     public AccountResponse deposit(UUID accountId, DepositRequest request, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
@@ -123,6 +138,11 @@ public class AccountService {
     }
 
     @Transactional
+        @Caching(evict = {
+            @CacheEvict(cacheNames = "accountsByUser", key = "#authentication.name"),
+            @CacheEvict(cacheNames = "accountById", key = "#authentication.name + ':' + #accountId"),
+            @CacheEvict(cacheNames = "transactionsByAccount", allEntries = true)
+        })
     public AccountResponse withdraw(UUID accountId, WithdrawRequest request, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 

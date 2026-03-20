@@ -8,7 +8,7 @@
   },
   "item": [
     {
-      "name": "Health",
+      "name": "Actuator",
       "item": [
         {
           "name": "GET /health",
