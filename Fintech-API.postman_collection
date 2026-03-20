@@ -8,19 +8,20 @@
   },
   "item": [
     {
-      "name": "Health",
+      "name": "Actuator",
       "item": [
         {
-          "name": "GET /health",
+          "name": "GET /actuator/health",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/health",
+              "raw": "{{baseUrl}}/actuator/health",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "actuator",
                 "health"
               ]
             }
@@ -479,6 +480,647 @@
                 {
                   "key": "size",
                   "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cache Integration",
+      "item": [
+        {
+          "name": "GET /actuator/metrics/cache.gets (accountsByUser miss baseline)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "let count = 0;",
+                  "if (json.measurements && Array.isArray(json.measurements)) {",
+                  "  const countMeasure = json.measurements.find(m => m.statistic === 'COUNT');",
+                  "  count = countMeasure ? countMeasure.value : (json.measurements[0]?.value || 0);",
+                  "} else if (json.baseUnit || json.description) {",
+                  "  count = json.value || 0;",
+                  "}",
+                  "console.log('accountsByUser miss baseline:', count);",
+                  "pm.collectionVariables.set('accountsMissBefore', String(count));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics/cache.gets?tag=cache:accountsByUser&tag=result:miss",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics",
+                "cache.gets"
+              ],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "cache:accountsByUser"
+                },
+                {
+                  "key": "tag",
+                  "value": "result:miss"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /accounts/{id}/deposit (evict accountsByUser)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountId1}}/deposit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountId1}}",
+                "deposit"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /accounts (user 1) after evict",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token1}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/metrics/cache.gets (accountsByUser miss assert)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "const measurements = json.measurements || [];",
+                  "const countMeasure = measurements.find(m => m.statistic === 'COUNT');",
+                  "const after = countMeasure ? countMeasure.value : 0;",
+                  "const before = Number(pm.collectionVariables.get('accountsMissBefore') || '0');",
+                  "console.log('accountsByUser miss - before:', before, 'after:', after, 'diff:', (after - before));",
+                  "pm.test('accountsByUser miss value is available', function () { pm.expect(after).to.be.a('number'); });",
+                  "pm.test('accountsByUser miss metric is readable', function () { pm.expect(Number.isFinite(after)).to.equal(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics/cache.gets?tag=cache:accountsByUser&tag=result:miss",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics",
+                "cache.gets"
+              ],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "cache:accountsByUser"
+                },
+                {
+                  "key": "tag",
+                  "value": "result:miss"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/metrics/cache.gets (accountsByUser hit baseline)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "let count = 0;",
+                  "if (json.measurements && Array.isArray(json.measurements)) {",
+                  "  const countMeasure = json.measurements.find(m => m.statistic === 'COUNT');",
+                  "  count = countMeasure ? countMeasure.value : (json.measurements[0]?.value || 0);",
+                  "} else if (json.baseUnit || json.description) {",
+                  "  count = json.value || 0;",
+                  "}",
+                  "console.log('accountsByUser hit baseline:', count);",
+                  "pm.collectionVariables.set('accountsHitBefore', String(count));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics/cache.gets?tag=cache:accountsByUser&tag=result:hit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics",
+                "cache.gets"
+              ],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "cache:accountsByUser"
+                },
+                {
+                  "key": "tag",
+                  "value": "result:hit"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /accounts (user 1) cached",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token1}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/metrics/cache.gets (accountsByUser hit assert)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "const measurements = json.measurements || [];",
+                  "const countMeasure = measurements.find(m => m.statistic === 'COUNT');",
+                  "const after = countMeasure ? countMeasure.value : 0;",
+                  "const before = Number(pm.collectionVariables.get('accountsHitBefore') || '0');",
+                  "console.log('accountsByUser hit - before:', before, 'after:', after, 'diff:', (after - before));",
+                  "pm.test('accountsByUser hit value is available', function () { pm.expect(after).to.be.a('number'); });",
+                  "pm.test('accountsByUser hit metric is readable', function () { pm.expect(Number.isFinite(after)).to.equal(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics/cache.gets?tag=cache:accountsByUser&tag=result:hit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics",
+                "cache.gets"
+              ],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "cache:accountsByUser"
+                },
+                {
+                  "key": "tag",
+                  "value": "result:hit"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/metrics/cache.gets (transactionsByAccount miss baseline)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "let count = 0;",
+                  "if (json.measurements && Array.isArray(json.measurements)) {",
+                  "  const countMeasure = json.measurements.find(m => m.statistic === 'COUNT');",
+                  "  count = countMeasure ? countMeasure.value : (json.measurements[0]?.value || 0);",
+                  "} else if (json.baseUnit || json.description) {",
+                  "  count = json.value || 0;",
+                  "}",
+                  "console.log('transactionsByAccount miss baseline:', count);",
+                  "pm.collectionVariables.set('txMissBefore', String(count));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics/cache.gets?tag=cache:transactionsByAccount&tag=result:miss",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics",
+                "cache.gets"
+              ],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "cache:transactionsByAccount"
+                },
+                {
+                  "key": "tag",
+                  "value": "result:miss"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /transfers (evict transactionsByAccount)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromAccountId\": \"{{accountId1}}\",\n  \"toAccountId\": \"{{accountId2}}\",\n  \"amount\": 1.00,\n  \"description\": \"Evict cache tx\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /transactions (user 1) after evict",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token1}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transactions?accountId={{accountId1}}&page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "accountId",
+                  "value": "{{accountId1}}"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/metrics/cache.gets (transactionsByAccount miss assert)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "const measurements = json.measurements || [];",
+                  "const countMeasure = measurements.find(m => m.statistic === 'COUNT');",
+                  "const after = countMeasure ? countMeasure.value : 0;",
+                  "const before = Number(pm.collectionVariables.get('txMissBefore') || '0');",
+                  "console.log('transactionsByAccount miss - before:', before, 'after:', after, 'diff:', (after - before));",
+                  "pm.test('transactionsByAccount miss value is available', function () { pm.expect(after).to.be.a('number'); });",
+                  "pm.test('transactionsByAccount miss metric is readable', function () { pm.expect(Number.isFinite(after)).to.equal(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics/cache.gets?tag=cache:transactionsByAccount&tag=result:miss",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics",
+                "cache.gets"
+              ],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "cache:transactionsByAccount"
+                },
+                {
+                  "key": "tag",
+                  "value": "result:miss"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/metrics/cache.gets (transactionsByAccount hit baseline)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "let count = 0;",
+                  "if (json.measurements && Array.isArray(json.measurements)) {",
+                  "  const countMeasure = json.measurements.find(m => m.statistic === 'COUNT');",
+                  "  count = countMeasure ? countMeasure.value : (json.measurements[0]?.value || 0);",
+                  "} else if (json.baseUnit || json.description) {",
+                  "  count = json.value || 0;",
+                  "}",
+                  "console.log('transactionsByAccount hit baseline:', count);",
+                  "pm.collectionVariables.set('txHitBefore', String(count));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics/cache.gets?tag=cache:transactionsByAccount&tag=result:hit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics",
+                "cache.gets"
+              ],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "cache:transactionsByAccount"
+                },
+                {
+                  "key": "tag",
+                  "value": "result:hit"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /transactions (user 1) cached",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token1}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transactions?accountId={{accountId1}}&page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "accountId",
+                  "value": "{{accountId1}}"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /actuator/metrics/cache.gets (transactionsByAccount hit assert)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "const measurements = json.measurements || [];",
+                  "const countMeasure = measurements.find(m => m.statistic === 'COUNT');",
+                  "const after = countMeasure ? countMeasure.value : 0;",
+                  "const before = Number(pm.collectionVariables.get('txHitBefore') || '0');",
+                  "console.log('transactionsByAccount hit - before:', before, 'after:', after, 'diff:', (after - before));",
+                  "pm.test('transactionsByAccount hit value is available', function () { pm.expect(after).to.be.a('number'); });",
+                  "pm.test('transactionsByAccount hit metric is readable', function () { pm.expect(Number.isFinite(after)).to.equal(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics/cache.gets?tag=cache:transactionsByAccount&tag=result:hit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics",
+                "cache.gets"
+              ],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "cache:transactionsByAccount"
+                },
+                {
+                  "key": "tag",
+                  "value": "result:hit"
                 }
               ]
             }

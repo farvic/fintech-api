@@ -1,5 +1,6 @@
 package com.farvic.fintech.dto.transaction;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -16,5 +17,5 @@ public record TransactionResponse(
         TransactionStatus status,
         String description,
         Instant createdAt
-) {
+) implements Serializable {
 }

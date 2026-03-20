@@ -26,6 +26,7 @@
     - [6.6 Acesse](#66-acesse)
     - [6.7 Postman](#67-postman)
     - [6.8 Parar e limpar ambiente Docker (opcional)](#68-parar-e-limpar-ambiente-docker-opcional)
+    <!-- - [6.9 Observabilidade de cache (Actuator)](#69-observabilidade-de-cache-actuator) -->
 - [7. Contato](#7-contato)
 
 ---
@@ -129,7 +130,7 @@ Authorization: Bearer <token>
 
 ## 6. Como rodar
 
-Caso deseje rodar o projeto sem Java e PostgreSQL instalados localmente (apenas com Docker), após definir as variáveis de ambiente, pule para a sessão que ensina a [rodar API via container](#alternativa-rodar-api-sem-java-local).
+Caso deseje rodar o projeto sem Java e PostgreSQL instalados localmente (apenas com Docker), após definir as variáveis de ambiente, pule para a sessão que ensina a [rodar API via container](#65-alternativa-rodar-api-sem-java-local).
 
 ### 6.1. Pré-requisitos
 
@@ -215,6 +216,13 @@ docker compose -f docker-compose-api.yml up -d --build
 
 Caso deseje testar a API utilizando o Postman, a coleção está disponível na raíz do projeto.
 
+Para validar cache (Redis + integração), execute na coleção nesta ordem:
+
+1. Pasta Auth (gera token1 e token2)
+2. Pasta Accounts (gera accountId1 e accountId2)
+3. Pasta Transactions (garante movimentações iniciais)
+4. Pasta Cache Integration (valida hit/miss e miss após evict via Actuator)
+
 
 ### 6.8. Parar e limpar ambiente Docker (opcional)
 
@@ -229,6 +237,8 @@ Compose com api:
 ```bash
 docker compose -f docker-compose-api.yml down -v
 ```
+
+
 
 <p align="right"><a href="#sumário">Voltar ao topo</a></p>
 

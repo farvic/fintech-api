@@ -4,12 +4,16 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.farvic.fintech.dto.transaction.PageResponse;
 import com.farvic.fintech.dto.transaction.TransactionResponse;
 import com.farvic.fintech.dto.transaction.TransferRequest;
 import com.farvic.fintech.entity.Account;
@@ -36,6 +40,11 @@ public class TransactionService {
     private final UserRepository userRepository;
 
     @Transactional
+        @Caching(evict = {
+            @CacheEvict(cacheNames = "transactionsByAccount", allEntries = true),
+            @CacheEvict(cacheNames = "accountsByUser", allEntries = true),
+            @CacheEvict(cacheNames = "accountById", allEntries = true)
+        })
     public TransactionResponse transfer(TransferRequest request, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
@@ -68,7 +77,11 @@ public class TransactionService {
         return toResponse(transaction);
     }
 
-    public Page<TransactionResponse> listMyTransactions(UUID accountId, Pageable pageable, Authentication authentication) {
+    @Cacheable(
+    cacheNames = "transactionsByAccount",
+    key = "#authentication.name + ':' + #accountId + ':' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()"
+)
+    public PageResponse<TransactionResponse> listMyTransactions(UUID accountId, Pageable pageable, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
         Account account = accountRepository.findById(accountId)
@@ -76,8 +89,17 @@ public class TransactionService {
 
         validateTransferOwnership(user, account);
 
-        return transactionRepository.findByFromAccountOrToAccountOrderByCreatedAtDesc(account, account, pageable)
+        Page<TransactionResponse> page = transactionRepository
+                .findByFromAccountOrToAccountOrderByCreatedAtDesc(account, account, pageable)
                 .map(this::toResponse);
+
+        return new PageResponse<>(
+                page.getContent(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages()
+        );
     }
 
     private void validateTransferOwnership(User user, Account fromAccount) {

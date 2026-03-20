@@ -2,7 +2,6 @@ package com.farvic.fintech.controller;
 
 import java.util.UUID;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -13,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.farvic.fintech.dto.transaction.PageResponse;
 import com.farvic.fintech.dto.transaction.TransactionResponse;
 import com.farvic.fintech.dto.transaction.TransferRequest;
 import com.farvic.fintech.service.TransactionService;
@@ -34,7 +34,7 @@ public class TransactionController {
     }
 
     @GetMapping("/transactions")
-    public Page<TransactionResponse> listMyTransactions(@RequestParam UUID accountId,
+    public PageResponse<TransactionResponse> listMyTransactions(@RequestParam UUID accountId,
                                                         Pageable pageable,
                                                         Authentication authentication) {
         return transactionService.listMyTransactions(accountId, pageable, authentication);
