@@ -57,3 +57,8 @@ management:
     enable:
       cache: true
 
+logging:
+  level:
+    org.springframework.data.redis: DEBUG
+    io.lettuce.core: DEBUG
+

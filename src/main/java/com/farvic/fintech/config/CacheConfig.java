@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -18,6 +19,10 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
+import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 @EnableCaching
@@ -32,7 +37,7 @@ public class CacheConfig {
     );
 
     @Bean
-    public CacheManager cacheManager(ObjectProvider<RedisConnectionFactory> redisConnectionFactoryProvider) {
+        public CacheManager cacheManager(ObjectProvider<RedisConnectionFactory> redisConnectionFactoryProvider) {
         ConcurrentMapCacheManager fallbackCacheManager = new ConcurrentMapCacheManager(CACHE_NAMES.toArray(String[]::new));
         RedisConnectionFactory redisConnectionFactory = redisConnectionFactoryProvider.getIfAvailable();
 
@@ -46,12 +51,26 @@ public class CacheConfig {
             return fallbackCacheManager;
         }
 
-        RedisCacheConfiguration configuration = RedisCacheConfiguration.defaultCacheConfig()
+        RedisCacheConfiguration jsonConfiguration = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(5))
+                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
+                GenericJacksonJsonRedisSerializer.builder()
+                    .enableUnsafeDefaultTyping()
+                    .build()))
                 .disableCachingNullValues();
 
+        RedisCacheConfiguration pageConfiguration = jsonConfiguration
+            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
+                new JdkSerializationRedisSerializer(getClass().getClassLoader())));
+
+        Map<String, RedisCacheConfiguration> perCacheConfiguration = Map.of(
+            "transactionsByAccount", pageConfiguration
+        );
+
         CacheManager redisCacheManager = RedisCacheManager.builder(redisConnectionFactory)
-                .cacheDefaults(configuration)
+            .cacheDefaults(jsonConfiguration)
+            .withInitialCacheConfigurations(perCacheConfiguration)
                 .initialCacheNames(new HashSet<>(CACHE_NAMES))
                 .build();
 

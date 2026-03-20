@@ -216,15 +216,13 @@ docker compose -f docker-compose-api.yml up -d --build
 
 Caso deseje testar a API utilizando o Postman, a coleção está disponível na raíz do projeto.
 
+Para validar cache (Redis + integração), execute na coleção nesta ordem:
 
-<!-- ### 6.9. Observabilidade de cache (Actuator)
+1. Pasta Auth (gera token1 e token2)
+2. Pasta Accounts (gera accountId1 e accountId2)
+3. Pasta Transactions (garante movimentações iniciais)
+4. Pasta Cache Integration (valida hit/miss e miss após evict via Actuator)
 
-Com a aplicação rodando, use os endpoints abaixo para acompanhar `hits/misses` e estado dos caches:
-
-- Métricas disponíveis: `GET /actuator/metrics`
-- Leituras de cache: `GET /actuator/metrics/cache.gets`
-- Filtrar por cache (exemplo): `GET /actuator/metrics/cache.gets?tag=cache:accountsByUser`
-- Caches registrados: `GET /actuator/caches` -->
 
 ### 6.8. Parar e limpar ambiente Docker (opcional)
 

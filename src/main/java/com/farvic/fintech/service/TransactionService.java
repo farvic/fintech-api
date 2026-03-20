@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.farvic.fintech.dto.transaction.PageResponse;
 import com.farvic.fintech.dto.transaction.TransactionResponse;
 import com.farvic.fintech.dto.transaction.TransferRequest;
 import com.farvic.fintech.entity.Account;
@@ -76,8 +77,11 @@ public class TransactionService {
         return toResponse(transaction);
     }
 
-    @Cacheable(cacheNames = "transactionsByAccount", key = "#authentication.name + ':' + #accountId + ':' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()")
-    public Page<TransactionResponse> listMyTransactions(UUID accountId, Pageable pageable, Authentication authentication) {
+    @Cacheable(
+    cacheNames = "transactionsByAccount",
+    key = "#authentication.name + ':' + #accountId + ':' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()"
+)
+    public PageResponse<TransactionResponse> listMyTransactions(UUID accountId, Pageable pageable, Authentication authentication) {
         User user = getAuthenticatedUser(authentication);
 
         Account account = accountRepository.findById(accountId)
@@ -85,8 +89,17 @@ public class TransactionService {
 
         validateTransferOwnership(user, account);
 
-        return transactionRepository.findByFromAccountOrToAccountOrderByCreatedAtDesc(account, account, pageable)
+        Page<TransactionResponse> page = transactionRepository
+                .findByFromAccountOrToAccountOrderByCreatedAtDesc(account, account, pageable)
                 .map(this::toResponse);
+
+        return new PageResponse<>(
+                page.getContent(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages()
+        );
     }
 
     private void validateTransferOwnership(User user, Account fromAccount) {

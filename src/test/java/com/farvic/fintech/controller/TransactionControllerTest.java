@@ -14,8 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -27,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.farvic.fintech.dto.transaction.PageResponse;
 import com.farvic.fintech.dto.transaction.TransactionResponse;
 import com.farvic.fintech.dto.transaction.TransferRequest;
 import com.farvic.fintech.enums.TransactionStatus;
@@ -126,10 +125,12 @@ class TransactionControllerTest {
                 Instant.now()
         );
 
-        var page = new PageImpl<>(
+        var page = new PageResponse<>(
                 List.of(transaction1, transaction2),
-                PageRequest.of(0, 10),
-                2
+                0,
+                10,
+                2,
+                1
         );
 
         when(transactionService.listMyTransactions(eq(accountId), any(), any()))
