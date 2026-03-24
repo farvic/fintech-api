@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -38,6 +39,7 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
+    private final IdempotencyService idempotencyService;
 
     @Transactional
         @Caching(evict = {
@@ -45,8 +47,19 @@ public class TransactionService {
             @CacheEvict(cacheNames = "accountsByUser", allEntries = true),
             @CacheEvict(cacheNames = "accountById", allEntries = true)
         })
-    public TransactionResponse transfer(TransferRequest request, Authentication authentication) {
+    public TransactionResponse transfer(TransferRequest request, Authentication authentication, String idempotencyKey) {
         User user = getAuthenticatedUser(authentication);
+
+        var existingResponse = idempotencyService.tryGetStoredResponse(
+            user.getId(),
+            idempotencyKey,
+            request,
+            TransactionResponse.class
+        );
+
+        if (existingResponse.isPresent()) {
+            return existingResponse.get();
+        }
 
         Account fromAccount = accountRepository.findById(request.fromAccountId())
                 .orElseThrow(() -> new ResourceNotFoundException("Source account not found"));
@@ -74,7 +87,28 @@ public class TransactionService {
                 .build();
 
         transaction = transactionRepository.save(transaction);
-        return toResponse(transaction);
+        TransactionResponse response = toResponse(transaction);
+
+        try {
+            idempotencyService.saveResponse(
+                    user.getId(),
+                    idempotencyKey,
+                    request,
+                    "TRANSFER",
+                    201,
+                    response
+            );
+        } catch (DataIntegrityViolationException ex) {
+            return idempotencyService.tryGetStoredResponse(
+                    user.getId(),
+                    idempotencyKey,
+                    request,
+                    TransactionResponse.class
+            ).orElseThrow(() -> ex);
+        }
+
+    
+        return response;
     }
 
     @Cacheable(

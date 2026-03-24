@@ -48,8 +48,9 @@ class TransactionControllerTest {
         @MockitoBean
     private TransactionService transactionService;
 
-        @MockitoBean
-        private JwtAuthenticationFilter jwtAuthenticationFilter;
+                @SuppressWarnings("unused")
+                @MockitoBean
+                private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     private Authentication auth() {
         return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
@@ -65,6 +66,7 @@ class TransactionControllerTest {
         UUID fromId = UUID.randomUUID();
         UUID toId = UUID.randomUUID();
         UUID txId = UUID.randomUUID();
+                String idempotencyKey = "idem-key-123";
 
         TransferRequest request = new TransferRequest(
                 fromId,
@@ -84,11 +86,12 @@ class TransactionControllerTest {
                 Instant.now()
         );
 
-        when(transactionService.transfer(eq(request), any())).thenReturn(response);
+        when(transactionService.transfer(eq(request), any(), eq(idempotencyKey))).thenReturn(response);
 
         mockMvc.perform(post("/transfers")
                         .with(csrf())
                         .with(authentication(auth()))
+                        .header("Idempotency-Key", idempotencyKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())

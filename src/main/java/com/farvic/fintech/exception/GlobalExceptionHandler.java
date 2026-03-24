@@ -109,4 +109,14 @@ public class GlobalExceptionHandler {
         problem.setProperty("path", request.getRequestURI());
         return problem;
     }
+
+    @ExceptionHandler(IdempotencyConflictException.class)
+    public ProblemDetail handleIdempotencyConflict(IdempotencyConflictException ex, HttpServletRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problem.setTitle("Idempotency conflict");
+        problem.setType(URI.create("https://api.fintech/errors/idempotency-conflict"));
+        problem.setProperty("timestamp", Instant.now());
+        problem.setProperty("path", request.getRequestURI());
+        return problem;
+    }
 }

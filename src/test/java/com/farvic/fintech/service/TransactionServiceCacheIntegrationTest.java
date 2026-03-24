@@ -58,6 +58,9 @@ class TransactionServiceCacheIntegrationTest {
     @MockitoBean
     private UserRepository userRepository;
 
+        @MockitoBean
+        private IdempotencyService idempotencyService;
+
     private Authentication authentication;
     private User user;
     private Account sourceAccount;
@@ -120,6 +123,8 @@ class TransactionServiceCacheIntegrationTest {
         when(accountRepository.findById(destinationAccount.getId())).thenReturn(Optional.of(destinationAccount));
         when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(idempotencyService.tryGetStoredResponse(any(UUID.class), any(String.class), any(), any(Class.class)))
+                .thenReturn(Optional.empty());
         when(transactionRepository.findByFromAccountOrToAccountOrderByCreatedAtDesc(sourceAccount, sourceAccount, pageable))
                 .thenReturn(new PageImpl<>(java.util.List.of(transaction), pageable, 1));
 
@@ -154,8 +159,9 @@ class TransactionServiceCacheIntegrationTest {
                 new BigDecimal("10.00"),
                 "Transfer test"
         );
+        String idempotencyKey = "idem-key-123";
 
-        transactionService.transfer(request, authentication);
+        transactionService.transfer(request, authentication, idempotencyKey);
         transactionService.listMyTransactions(sourceAccount.getId(), pageable, authentication);
 
         verify(transactionRepository, times(2))
