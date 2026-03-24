@@ -22,6 +22,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -31,6 +32,7 @@ import com.farvic.fintech.dto.transaction.TransferRequest;
 import com.farvic.fintech.enums.TransactionStatus;
 import com.farvic.fintech.enums.TransactionType;
 import com.farvic.fintech.exception.GlobalExceptionHandler;
+import com.farvic.fintech.http.IdempotencyHeaders;
 import com.farvic.fintech.security.JwtAuthenticationFilter;
 import com.farvic.fintech.service.TransactionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -86,15 +88,61 @@ class TransactionControllerTest {
                 Instant.now()
         );
 
-        when(transactionService.transfer(eq(request), any(), eq(idempotencyKey))).thenReturn(response);
+        when(transactionService.transfer(eq(request), any(), eq(idempotencyKey)))
+                .thenReturn(new TransactionService.TransferResult(response, false));
 
         mockMvc.perform(post("/transfers")
                         .with(csrf())
                         .with(authentication(auth()))
-                        .header("Idempotency-Key", idempotencyKey)
+                        .header(IdempotencyHeaders.IDEMPOTENCY_KEY, idempotencyKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
+                .andExpect(header().string(IdempotencyHeaders.IDEMPOTENCY_REPLAYED, "false"))
+                .andExpect(jsonPath("$.id").value(txId.toString()))
+                .andExpect(jsonPath("$.amount").value(50.00))
+                .andExpect(jsonPath("$.type").value("TRANSFER"))
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+    }
+
+    @Test
+    @DisplayName("POST /transfers com mesma chave deve sinalizar replay de idempotência")
+    void shouldReturnOkAndReplayHeadersWhenIdempotencyKeyIsReused() throws Exception {
+        UUID fromId = UUID.randomUUID();
+        UUID toId = UUID.randomUUID();
+        UUID txId = UUID.randomUUID();
+        String idempotencyKey = "idem-key-123";
+
+        TransferRequest request = new TransferRequest(
+                fromId,
+                toId,
+                new BigDecimal("50.00"),
+                "Transferência teste"
+        );
+
+        TransactionResponse response = new TransactionResponse(
+                txId,
+                fromId,
+                toId,
+                new BigDecimal("50.00"),
+                TransactionType.TRANSFER,
+                TransactionStatus.COMPLETED,
+                "Transferência teste",
+                Instant.now()
+        );
+
+        when(transactionService.transfer(eq(request), any(), eq(idempotencyKey)))
+                .thenReturn(new TransactionService.TransferResult(response, true));
+
+        mockMvc.perform(post("/transfers")
+                        .with(csrf())
+                        .with(authentication(auth()))
+                        .header(IdempotencyHeaders.IDEMPOTENCY_KEY, idempotencyKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(header().string(IdempotencyHeaders.IDEMPOTENCY_REPLAYED, "true"))
+                .andExpect(header().string(IdempotencyHeaders.IDEMPOTENCY_MESSAGE, "Transaction already processed for this Idempotency-Key"))
                 .andExpect(jsonPath("$.id").value(txId.toString()))
                 .andExpect(jsonPath("$.amount").value(50.00))
                 .andExpect(jsonPath("$.type").value("TRANSFER"))

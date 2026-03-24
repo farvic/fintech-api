@@ -113,11 +113,12 @@ class TransactionServiceTest {
         when(transactionRepository.save(any(Transaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = transactionService.transfer(request, authentication, IDEMPOTENCY_KEY);
+        var result = transactionService.transfer(request, authentication, IDEMPOTENCY_KEY);
 
         assertEquals(new BigDecimal("350.00"), sourceAccount.getBalance());
         assertEquals(new BigDecimal("250.00"), destinationAccount.getBalance());
-        assertEquals(new BigDecimal("150.00"), response.amount());
+        assertEquals(new BigDecimal("150.00"), result.response().amount());
+        assertEquals(false, result.replayed());
 
         verify(accountRepository, times(2)).save(any(Account.class));
         verify(transactionRepository).save(any(Transaction.class));
@@ -230,9 +231,10 @@ class TransactionServiceTest {
                 eq(TransactionResponse.class)
         )).thenReturn(Optional.of(storedResponse));
 
-        TransactionResponse response = transactionService.transfer(request, authentication, IDEMPOTENCY_KEY);
+        TransactionService.TransferResult result = transactionService.transfer(request, authentication, IDEMPOTENCY_KEY);
 
-        assertEquals(storedResponse, response);
+        assertEquals(storedResponse, result.response());
+        assertEquals(true, result.replayed());
         verify(accountRepository, never()).save(any(Account.class));
         verify(transactionRepository, never()).save(any(Transaction.class));
         verify(idempotencyService, never()).saveResponse(any(UUID.class), anyString(), any(), anyString(), anyInt(), any());
@@ -281,9 +283,10 @@ class TransactionServiceTest {
                 eq(TransactionResponse.class)
         )).thenReturn(Optional.empty()).thenReturn(Optional.of(recoveredResponse));
 
-        TransactionResponse response = transactionService.transfer(request, authentication, IDEMPOTENCY_KEY);
+        TransactionService.TransferResult result = transactionService.transfer(request, authentication, IDEMPOTENCY_KEY);
 
-        assertEquals(recoveredResponse, response);
+        assertEquals(recoveredResponse, result.response());
+        assertEquals(true, result.replayed());
     }
 
     @Test

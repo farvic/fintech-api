@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "d50244be-3332-490c-abcc-bfe6e2910cf1",
+    "_postman_id": "0f301e76-1f6a-46a4-99f6-8021327467d1",
     "name": "Fintech-API - Postman",
     "description": "Collection to test all the fintech-api endpoints.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -385,7 +385,49 @@
       "name": "Transactions",
       "item": [
         {
-          "name": "POST /transfers (user 1 -> user 2)",
+          "name": "POST /transfers (user 1 -> user 2) - 201 Created",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set(\"idempotencyKey\", crypto.randomUUID());"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const replayed = pm.response.headers.get(\"X-Idempotency-Replayed\");\r",
+                  "const idemMsg = pm.response.headers.get(\"X-Idempotency-Message\");\r",
+                  "const status = pm.response.code;\r",
+                  "\r",
+                  "pm.test(\"Header X-Idempotency-Replayed presente\", function () {\r",
+                  "    pm.expect(replayed).to.not.be.undefined;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Transação nova\", function () {\r",
+                  "    if (replayed === \"false\") {\r",
+                  "        pm.expect(status).to.eql(201);\r",
+                  "    }\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Body contém id da transação\", function () {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json).to.have.property(\"id\");\r",
+                  "    pm.expect(json.id).to.not.be.empty;\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -396,6 +438,96 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromAccountId\": \"{{accountId1}}\",\n  \"toAccountId\": \"{{accountId2}}\",\n  \"amount\": {{transferAmount}},\n  \"description\": \"Transferência teste\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /transfers (user 1 -> user 2) - idempotency test : 200 OK",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const replayed = pm.response.headers.get(\"X-Idempotency-Replayed\");\r",
+                  "const idemMsg = pm.response.headers.get(\"X-Idempotency-Message\");\r",
+                  "const status = pm.response.code;\r",
+                  "\r",
+                  "pm.test(\"Header X-Idempotency-Replayed presente\", function () {\r",
+                  "    pm.expect(replayed).to.not.be.undefined;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Transação repetida\", function () {\r",
+                  "    if (replayed === \"true\") {\r",
+                  "        pm.expect(status).to.eql(200);\r",
+                  "    } else {\r",
+                  "        throw new Error(\"Valor inesperado para X-Idempotency-Replayed: \" + replayed);\r",
+                  "    }\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Mensagem de replay quando repetido\", function () {\r",
+                  "    if (replayed === \"true\") {\r",
+                  "        pm.expect(idemMsg).to.eql(\"Transaction already processed for this Idempotency-Key\");\r",
+                  "    }\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Body contém id da transação\", function () {\r",
+                  "    const json = pm.response.json();\r",
+                  "    pm.expect(json).to.have.property(\"id\");\r",
+                  "    pm.expect(json.id).to.not.be.empty;\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}",
+                "type": "text"
               }
             ],
             "body": {
@@ -497,7 +629,6 @@
             {
               "listen": "test",
               "script": {
-                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
                   "const json = pm.response.json();",
@@ -510,7 +641,10 @@
                   "}",
                   "console.log('accountsByUser miss baseline:', count);",
                   "pm.collectionVariables.set('accountsMissBefore', String(count));"
-                ]
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
               }
             }
           ],
@@ -852,10 +986,12 @@
             {
               "listen": "test",
               "script": {
-                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });"
-                ]
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
               }
             }
           ],
@@ -893,10 +1029,12 @@
             {
               "listen": "test",
               "script": {
-                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
-                ]
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
               }
             }
           ],
@@ -906,6 +1044,11 @@
               {
                 "key": "Authorization",
                 "value": "Bearer {{token1}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -1210,6 +1353,26 @@
     {
       "key": "withdrawAmount",
       "value": "100.00"
+    },
+    {
+      "key": "accountsMissBefore",
+      "value": ""
+    },
+    {
+      "key": "accountsHitBefore",
+      "value": ""
+    },
+    {
+      "key": "txMissBefore",
+      "value": ""
+    },
+    {
+      "key": "txHitBefore",
+      "value": ""
+    },
+    {
+      "key": "idempotencyKey",
+      "value": ""
     }
   ]
 }

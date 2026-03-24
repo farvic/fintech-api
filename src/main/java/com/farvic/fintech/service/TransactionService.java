@@ -36,6 +36,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TransactionService {
 
+    public record TransferResult(TransactionResponse response, boolean replayed) {
+    }
+
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
@@ -47,7 +50,7 @@ public class TransactionService {
             @CacheEvict(cacheNames = "accountsByUser", allEntries = true),
             @CacheEvict(cacheNames = "accountById", allEntries = true)
         })
-    public TransactionResponse transfer(TransferRequest request, Authentication authentication, String idempotencyKey) {
+    public TransferResult transfer(TransferRequest request, Authentication authentication, String idempotencyKey) {
         User user = getAuthenticatedUser(authentication);
 
         var existingResponse = idempotencyService.tryGetStoredResponse(
@@ -58,7 +61,7 @@ public class TransactionService {
         );
 
         if (existingResponse.isPresent()) {
-            return existingResponse.get();
+            return new TransferResult(existingResponse.get(), true);
         }
 
         Account fromAccount = accountRepository.findById(request.fromAccountId())
@@ -99,16 +102,17 @@ public class TransactionService {
                     response
             );
         } catch (DataIntegrityViolationException ex) {
-            return idempotencyService.tryGetStoredResponse(
+            TransactionResponse recovered = idempotencyService.tryGetStoredResponse(
                     user.getId(),
                     idempotencyKey,
                     request,
                     TransactionResponse.class
             ).orElseThrow(() -> ex);
+
+            return new TransferResult(recovered, true);
         }
 
-    
-        return response;
+        return new TransferResult(response, false);
     }
 
     @Cacheable(
